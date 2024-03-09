@@ -8,6 +8,7 @@ use App\Http\Requests\Passport\AuthLogin;
 use App\Http\Requests\Passport\AuthRegister;
 use App\Jobs\SendEmailJob;
 use App\Models\InviteCode;
+use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\AuthService;
@@ -305,6 +306,64 @@ class AuthController extends Controller
             abort(500, __('Reset failed'));
         }
         Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $request->input('email')));
+        return response([
+            'data' => true
+        ]);
+    }
+
+    /** 注销账号 */
+    public function delUser(AuthLogin $request)
+    {
+        $email = $request->input('email');
+        $password = $request->input('password');
+
+        if ((int)config('v2board.password_limit_enable', 1)) {
+            $passwordErrorCount = (int)Cache::get(CacheKey::get('PASSWORD_ERROR_LIMIT', $email), 0);
+            if ($passwordErrorCount >= (int)config('v2board.password_limit_count', 5)) {
+                abort(500, __('There are too many password errors, please try again after :minute minutes.', [
+                    'minute' => config('v2board.password_limit_expire', 60)
+                ]));
+            }
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            abort(500, __('Incorrect email or password'));
+        }
+        if (!Helper::multiPasswordVerify(
+            $user->password_algo,
+            $user->password_salt,
+            $password,
+            $user->password)
+        ) {
+            if ((int)config('v2board.password_limit_enable')) {
+                Cache::put(
+                    CacheKey::get('PASSWORD_ERROR_LIMIT', $email),
+                    (int)$passwordErrorCount + 1,
+                    60 * (int)config('v2board.password_limit_expire', 60)
+                );
+            }
+            abort(500, __('Incorrect email or password'));
+        }
+
+        try {
+            $deletedOrders = Order::where('user_id', $user->id)->delete();
+        } catch (\Exception $e) {
+            abort(500, '删除用户订单失败');
+        }
+
+        try {
+            $inviteUser = User::where('invite_user_id', $user->id)->update(['invite_user_id' => null]);
+        } catch (\Exception $e) {
+            abort(500, '删除用户邀请人失败');
+        }
+
+        try{
+            $user->delete();
+        }catch (\Exception $e){
+            abort(500, '删除用户失败');
+        }
+
         return response([
             'data' => true
         ]);
