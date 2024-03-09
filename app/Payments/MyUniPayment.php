@@ -58,9 +58,11 @@ class MyUniPayment
             $createInvoiceRequest->setPriceAmount($order['total_amount'] / 100);
             //订单货币单位
             $createInvoiceRequest->setPriceCurrency($this->config['currency']);
-            //
+            //回调地址
             $createInvoiceRequest->setNotifyUrl($order['notify_url']);
-            $createInvoiceRequest->setRedirectUrl($order['return_url']);
+            //返回页地址
+            //$createInvoiceRequest->setRedirectUrl($order['return_url']);
+            $createInvoiceRequest->setRedirectUrl("https://api.heima2u.com/return_url.php");
             //订单号
             $createInvoiceRequest->setOrderId($order['trade_no']);
             //订单名称
@@ -126,8 +128,7 @@ class MyUniPayment
 
         return[
             'trade_no' => $params['order_id'],
-            'callback_no' => $params['invoi
-            ce_id']
+            'callback_no' => $params['invoice_id']
         ];
 
     }
