@@ -135,7 +135,7 @@ class CommercePay
         $postdata = array(
             'amount' => intval($order['total_amount']),
             'callbackUrl' => $order['notify_url'],
-            "channelId" => 22,
+            //"channelId" => 22,
             'currencyCode' => $this->config['commerce_currencycode'],
             'customer' => [
                 'email' => "123456@qq.com",
