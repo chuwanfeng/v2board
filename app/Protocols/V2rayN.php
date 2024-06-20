@@ -66,6 +66,8 @@ class V2rayN
 
     public static function buildVmess($uuid, $server)
     {
+        $networkSettings = $server['networkSettings'];
+
         $config = [
             "v" => "2",
             "ps" => $server['name'],
@@ -79,11 +81,20 @@ class V2rayN
             "path" => "",
             "tls" => $server['tls'] ? "tls" : "",
         ];
+
         if ($server['tls']) {
             if ($server['tlsSettings']) {
                 $tlsSettings = $server['tlsSettings'];
-                if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
+                if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName'])) {
                     $config['sni'] = $tlsSettings['serverName'];
+
+                    if (isset($networkSettings['FingerPrint']) && (string)$networkSettings['FingerPrint'] != 'none') {
+                        $config['fp'] = $networkSettings['FingerPrint'];
+                    }
+                    if (isset($networkSettings['Alpn']) && (string)$networkSettings['Alpn'] != 'none') {
+                        $config['alpn'] = $networkSettings['Alpn'];
+                    }
+                }
             }
         }
         if ((string)$server['network'] === 'tcp') {
@@ -210,10 +221,12 @@ class V2rayN
             }
             if($server['network'] === "ws") {
                 if(isset($server['network_settings']['path'])) {
-                    $uri .= "&path={$server['network_settings']['path']}";
+                    $path = Helper::encodeURIComponent($server['network_settings']['path']);
+                    $uri .= "&path={$path}";
                 }
                 if(isset($server['network_settings']['headers']['Host'])) {
-                    $uri .= "&host={$server['network_settings']['headers']['Host']}";
+                    $host = Helper::encodeURIComponent($server['network_settings']['headers']['Host']);
+                    $uri .= "&host={$host}";
                 }
             }
         }
